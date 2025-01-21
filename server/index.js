@@ -5,6 +5,7 @@ import cors from "cors";
 import path from "path";
 import { exec } from "child_process";
 import { fileURLToPath } from "url";
+import si from "systeminformation";
 
 import sendEmailAlert from "./nodemailer.js";
 
@@ -26,24 +27,48 @@ const executeCommand = (command) => {
     });
   });
 };
+const getSystemMetrics = async () => {
+  try {
+    const cpuLoad = await si.currentLoad(); // Get CPU usage
+    const mem = await si.mem(); // Get memory info
+    const disk = await si.fsSize(); // Get disk usage info
+
+    return {
+      cpu: cpuLoad.currentLoad.toFixed(2), // CPU usage in percentage
+      memory: ((mem.active / mem.total) * 100).toFixed(2), // Memory usage in percentage
+      disk: disk[0].use.toFixed(2), // Disk usage in percentage
+    };
+  } catch (error) {
+    throw new Error("Failed to fetch system metrics");
+  }
+};
 
 app.get("/api/metrics", async (req, res) => {
   try {
-    const cpuUsage = await executeCommand(
-      "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'"
-    );
-    const diskUsage = await executeCommand(
-      "df -h / | awk 'NR==2 {print $5}' | sed 's/%//'"
-    );
-    res.json({
-      cpu: Number.parseFloat(cpuUsage).toFixed(2),
-      memory: Number.parseFloat(memoryUsage).toFixed(2),
-      disk: Number.parseFloat(diskUsage).toFixed(2),
-    });
+    const metrics = await getSystemMetrics();
+    res.json(metrics);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch system metrics" });
+    res.status(500).json({ error: error.message });
   }
 });
+
+// app.get("/api/metrics", async (req, res) => {
+//   try {
+//     const cpuUsage = await executeCommand(
+//       "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'"
+//     );
+//     const diskUsage = await executeCommand(
+//       "df -h / | awk 'NR==2 {print $5}' | sed 's/%//'"
+//     );
+//     res.json({
+//       cpu: Number.parseFloat(cpuUsage).toFixed(2),
+//       memory: Number.parseFloat(memoryUsage).toFixed(2),
+//       disk: Number.parseFloat(diskUsage).toFixed(2),
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: "Failed to fetch system metrics" });
+//   }
+// });
 
 
 const checkMetricsAndAlert = async () => {
