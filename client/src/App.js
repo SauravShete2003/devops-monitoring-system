@@ -22,9 +22,10 @@ function App() {
     const fetchMetrics = async () => {
       try {
         const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/metrics`);
-    
+        console.log("Backend URL:", process.env.REACT_APP_BACKEND_URL);
         const data = response.data;
-    
+        console.log(response.data.data);
+        
         setMetrics(data);
         setHistory((prev) => ({
           cpu: [...prev.cpu, data.cpu].slice(-10),
@@ -32,14 +33,14 @@ function App() {
           disk: [...prev.disk, data.disk].slice(-10),
         }));
       } catch (error) {
-        console.error("Failed to fetch metrics:", error);
+        console.error("Failed to fetch metrics:", error.message);
       }
     };
     
 
     fetchMetrics()
-    const interval = setInterval(fetchMetrics, 5000)
-    return () => clearInterval(interval)
+    // const interval = setInterval(fetchMetrics, 5000)
+    // return () => clearInterval(interval)
   }, [])
 
   const chartOptions = {
